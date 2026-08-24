@@ -3,80 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจองที่จอดรถ (Parking Booking)</title>
+    <title>ระบบจองที่จอดรถ 3 ช่อง (Smart Parking)</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f4f7f6; padding: 20px; }
-        h1 { color: #333; }
-        .parking-container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 30px; }
-        .slot-card { background: white; border-radius: 12px; padding: 20px; width: 140px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 3px solid #4CAF50; }
-        .slot-card.booked { border-color: #f44336; background-color: #ffebee; }
-        .slot-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-        .status-text { font-size: 14px; margin-bottom: 15px; color: #4CAF50; font-weight: bold; }
-        .slot-card.booked .status-text { color: #f44336; }
-        button { padding: 10px 15px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; color: white; background-color: #4CAF50; transition: 0.2s; }
-        .slot-card.booked button { background-color: #f44336; }
-        button:hover { opacity: 0.8; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f0f2f5; padding: 20px; }
+        h1 { color: #1c1e21; }
+        
+        .ip-config { margin-bottom: 20px; }
+        .ip-config input { padding: 8px; font-size: 16px; width: 200px; text-align: center; }
+
+        .parking-container { display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; margin-top: 20px; }
+        
+        /* สไตล์ช่องจอด */
+        .slot-card { background: white; border-radius: 15px; padding: 20px; width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 4px solid #2ecc71; transition: 0.3s; }
+        .slot-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #333; }
+        .status-text { font-size: 16px; margin-bottom: 20px; color: #2ecc71; font-weight: bold; }
+        
+        /* สีตามสถานะ */
+        .slot-card.reserved { border-color: #f1c40f; background-color: #fffde7; }
+        .slot-card.reserved .status-text { color: #f39c12; }
+        
+        .slot-card.occupied { border-color: #e74c3c; background-color: #fdedec; }
+        .slot-card.occupied .status-text { color: #c0392b; }
+
+        button { padding: 10px 20px; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; color: white; background-color: #2ecc71; font-weight: bold; transition: 0.2s; }
+        .slot-card.reserved button { background-color: #f39c12; }
+        .slot-card.occupied button { background-color: #95a5a6; cursor: not-allowed; }
+        button:hover:not(:disabled) { opacity: 0.85; }
     </style>
 </head>
 <body>
 
-    <h1>ระบบจองที่จอดรถออนไลน์</h1>
-    <p>เลือกช่องจอดที่ต้องการเพื่อทำการจอง/ยกเลิก</p>
+    <h1>ระบบจองที่จอดรถอัจฉริยะ (3 ช่อง)</h1>
+    
+    <div class="ip-config">
+        <label>IP ESP32: </label>
+        <input type="text" id="espIP" value="192.168.1.50" placeholder="ใส่ IP ของ ESP32">
+    </div>
 
     <div class="parking-container">
-        <!-- ช่องจอดที่ 1 -->
-        <div class="slot-card" id="card-A1">
-            <div class="slot-title">A1</div>
-            <div class="status-text" id="status-A1">ว่าง</div>
-            <button id="btn-A1" onclick="toggleBooking('A1')">กดจอง</button>
+        <!-- ช่อง 1 -->
+        <div class="slot-card" id="card-1">
+            <div class="slot-title">ช่อง 1</div>
+            <div class="status-text" id="status-1">ว่าง</div>
+            <button id="btn-1" onclick="toggleBooking(1)">กดจอง</button>
         </div>
 
-        <!-- ช่องจอดที่ 2 -->
-        <div class="slot-card" id="card-A2">
-            <div class="slot-title">A2</div>
-            <div class="status-text" id="status-A2">ว่าง</div>
-            <button id="btn-A2" onclick="toggleBooking('A2')">กดจอง</button>
+        <!-- ช่อง 2 -->
+        <div class="slot-card" id="card-2">
+            <div class="slot-title">ช่อง 2</div>
+            <div class="status-text" id="status-2">ว่าง</div>
+            <button id="btn-2" onclick="toggleBooking(2)">กดจอง</button>
+        </div>
+
+        <!-- ช่อง 3 -->
+        <div class="slot-card" id="card-3">
+            <div class="slot-title">ช่อง 3</div>
+            <div class="status-text" id="status-3">ว่าง</div>
+            <button id="btn-3" onclick="toggleBooking(3)">กดจอง</button>
         </div>
     </div>
 
     <script>
-        // ใส่ IP Address ของ ESP32 ในบ้านของคุณ (กรณีเชื่อมต่อ Wi-Fi วงเดียวกัน)
-        const esp32_ip = "http://192.168.1.50";
+        const reservedState = { 1: false, 2: false, 3: false };
+        const occupiedState = { 1: false, 2: false, 3: false };
 
-        // เก็บสถานะช่องจอด
-        const slots = { A1: false, A2: false };
+        function getIP() {
+            return `http://${document.getElementById('espIP').value}`;
+        }
 
-        function toggleBooking(slotId) {
-            // สลับสถานะ (จอง / ยกเลิก)
-            slots[slotId] = !slots[slotId];
-            
-            const isBooked = slots[slotId];
-            const card = document.getElementById(`card-${slotId}`);
-            const statusText = document.getElementById(`status-${slotId}`);
-            const btn = document.getElementById(`btn-${slotId}`);
+        function toggleBooking(slot) {
+            if (occupiedState[slot]) return; // ถ้ามีรถจอดอยู่ ห้ามกดจอง
 
-            if (isBooked) {
-                card.classList.add('booked');
-                statusText.innerText = 'ถูกจองแล้ว';
+            reservedState[slot] = !reservedState[slot];
+            const action = reservedState[slot] ? 'book' : 'cancel';
+
+            // ส่งคำสั่งไปยัง ESP32
+            fetch(`${getIP()}/api/reserve?slot=${slot}&action=${action}`)
+                .then(res => res.text())
+                .then(() => updateUI(slot))
+                .catch(err => alert("ไม่สามารถติดต่อ ESP32 ได้ กรุณาเช็ค IP หรือ Wi-Fi"));
+        }
+
+        function updateUI(slot) {
+            const card = document.getElementById(`card-${slot}`);
+            const statusText = document.getElementById(`status-${slot}`);
+            const btn = document.getElementById(`btn-${slot}`);
+
+            card.className = 'slot-card'; // รีเซ็ต class
+
+            if (occupiedState[slot]) {
+                card.classList.add('occupied');
+                statusText.innerText = 'มีรถจอดอยู่';
+                btn.innerText = 'ไม่สามารถจองได้';
+                btn.disabled = true;
+            } else if (reservedState[slot]) {
+                card.classList.add('reserved');
+                statusText.innerText = 'จองแล้ว (ไฟเหลือง)';
                 btn.innerText = 'ยกเลิกการจอง';
-                sendToESP32(slotId, 'book');
+                btn.disabled = false;
             } else {
-                card.classList.remove('booked');
-                statusText.innerText = 'ว่าง';
+                statusText.innerText = 'ว่าง (ไฟเขียว)';
                 btn.innerText = 'กดจอง';
-                sendToESP32(slotId, 'cancel');
+                btn.disabled = false;
             }
         }
 
-        function sendToESP32(slotId, action) {
-            // ยิงคำสั่งไปยัง ESP32 เช่น http://192.168.1.50/reserve?slot=A1&action=book
-            const url = `${esp32_ip}/reserve?slot=${slotId}&action=${action}`;
-            
-            fetch(url)
-                .then(response => response.text())
-                .then(data => console.log(`ESP32 ตอบกลับ: ${data}`))
-                .catch(error => console.error('ไม่สามารถส่งข้อมูลหา ESP32 ได้:', error));
-        }
+        // ดึงสถานะระยะทางจาก Ultrasonic บน ESP32 ทุกๆ 1 วินาที
+        setInterval(() => {
+            fetch(`${getIP()}/api/status`)
+                .then(res => res.json())
+                .then(data => {
+                    occupiedState[1] = data.slot1;
+                    occupiedState[2] = data.slot2;
+                    occupiedState[3] = data.slot3;
+                    
+                    updateUI(1);
+                    updateUI(2);
+                    updateUI(3);
+                })
+                .catch(() => {});
+        }, 1000);
     </script>
 </body>
 </html>
