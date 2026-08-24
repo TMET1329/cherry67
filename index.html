@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจองที่จอดรถ (Parking Booking)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f4f7f6; padding: 20px; }
+        h1 { color: #333; }
+        .parking-container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 30px; }
+        .slot-card { background: white; border-radius: 12px; padding: 20px; width: 140px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 3px solid #4CAF50; }
+        .slot-card.booked { border-color: #f44336; background-color: #ffebee; }
+        .slot-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+        .status-text { font-size: 14px; margin-bottom: 15px; color: #4CAF50; font-weight: bold; }
+        .slot-card.booked .status-text { color: #f44336; }
+        button { padding: 10px 15px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; color: white; background-color: #4CAF50; transition: 0.2s; }
+        .slot-card.booked button { background-color: #f44336; }
+        button:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <h1>ระบบจองที่จอดรถออนไลน์</h1>
+    <p>เลือกช่องจอดที่ต้องการเพื่อทำการจอง/ยกเลิก</p>
+
+    <div class="parking-container">
+        <!-- ช่องจอดที่ 1 -->
+        <div class="slot-card" id="card-A1">
+            <div class="slot-title">A1</div>
+            <div class="status-text" id="status-A1">ว่าง</div>
+            <button id="btn-A1" onclick="toggleBooking('A1')">กดจอง</button>
+        </div>
+
+        <!-- ช่องจอดที่ 2 -->
+        <div class="slot-card" id="card-A2">
+            <div class="slot-title">A2</div>
+            <div class="status-text" id="status-A2">ว่าง</div>
+            <button id="btn-A2" onclick="toggleBooking('A2')">กดจอง</button>
+        </div>
+    </div>
+
+    <script>
+        // ใส่ IP Address ของ ESP32 ในบ้านของคุณ (กรณีเชื่อมต่อ Wi-Fi วงเดียวกัน)
+        const esp32_ip = "http://192.168.1.50";
+
+        // เก็บสถานะช่องจอด
+        const slots = { A1: false, A2: false };
+
+        function toggleBooking(slotId) {
+            // สลับสถานะ (จอง / ยกเลิก)
+            slots[slotId] = !slots[slotId];
+            
+            const isBooked = slots[slotId];
+            const card = document.getElementById(`card-${slotId}`);
+            const statusText = document.getElementById(`status-${slotId}`);
+            const btn = document.getElementById(`btn-${slotId}`);
+
+            if (isBooked) {
+                card.classList.add('booked');
+                statusText.innerText = 'ถูกจองแล้ว';
+                btn.innerText = 'ยกเลิกการจอง';
+                sendToESP32(slotId, 'book');
+            } else {
+                card.classList.remove('booked');
+                statusText.innerText = 'ว่าง';
+                btn.innerText = 'กดจอง';
+                sendToESP32(slotId, 'cancel');
+            }
+        }
+
+        function sendToESP32(slotId, action) {
+            // ยิงคำสั่งไปยัง ESP32 เช่น http://192.168.1.50/reserve?slot=A1&action=book
+            const url = `${esp32_ip}/reserve?slot=${slotId}&action=${action}`;
+            
+            fetch(url)
+                .then(response => response.text())
+                .then(data => console.log(`ESP32 ตอบกลับ: ${data}`))
+                .catch(error => console.error('ไม่สามารถส่งข้อมูลหา ESP32 ได้:', error));
+        }
+    </script>
+</body>
+</html>
