@@ -3,40 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจองที่จอดรถ</title>
+    <title>ระบบจองที่จอดรถ 3 ช่อง (Smart Parking)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f0f2f5; padding: 20px; }
         h1 { color: #1c1e21; }
         
-        .ip-config { margin-bottom: 20px; }
-        .ip-config input { padding: 8px; font-size: 16px; width: 200px; text-align: center; }
+        .ip-bar { margin-bottom: 20px; font-weight: bold; color: #555; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-change-ip { padding: 5px 12px; font-size: 13px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-change-ip:hover { background-color: #2980b9; }
 
         .parking-container { display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; margin-top: 20px; }
         
-        /* สไตล์ช่องจอด */
         .slot-card { background: white; border-radius: 15px; padding: 20px; width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 4px solid #2ecc71; transition: 0.3s; }
         .slot-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #333; }
         .status-text { font-size: 16px; margin-bottom: 20px; color: #2ecc71; font-weight: bold; }
         
-        /* สีตามสถานะ */
         .slot-card.reserved { border-color: #f1c40f; background-color: #fffde7; }
         .slot-card.reserved .status-text { color: #f39c12; }
         
         .slot-card.occupied { border-color: #e74c3c; background-color: #fdedec; }
         .slot-card.occupied .status-text { color: #c0392b; }
 
-        button { padding: 10px 20px; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; color: white; background-color: #2ecc71; font-weight: bold; transition: 0.2s; }
-        .slot-card.reserved button { background-color: #f39c12; }
-        .slot-card.occupied button { background-color: #95a5a6; cursor: not-allowed; }
-        button:hover:not(:disabled) { opacity: 0.85; }
+        .btn-slot { padding: 10px 20px; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; color: white; background-color: #2ecc71; font-weight: bold; transition: 0.2s; }
+        .slot-card.reserved .btn-slot { background-color: #f39c12; }
+        .slot-card.occupied .btn-slot { background-color: #95a5a6; cursor: not-allowed; }
+        .btn-slot:hover:not(:disabled) { opacity: 0.85; }
     </style>
 </head>
 <body>
 
     <h1>ที่จอดรถ</h1>
     
-    <div class="ip-info">
-        สถานะการเชื่อมต่อ: IP ESP32 (10.0.151.131)
+    <!-- แถบแสดง IP และปุ่มสำหรับเปลี่ยน IP -->
+    <div class="ip-bar">
+        <span>IP ESP32: <span id="currentIPDisplay">10.0.151.131</span></span>
+        <button class="btn-change-ip" onclick="changeIP()">เปลี่ยน IP</button>
     </div>
 
     <div class="parking-container">
@@ -44,44 +45,54 @@
         <div class="slot-card" id="card-1">
             <div class="slot-title">ช่อง 1</div>
             <div class="status-text" id="status-1">ว่าง</div>
-            <button id="btn-1" onclick="toggleBooking(1)">กดจอง</button>
+            <button class="btn-slot" id="btn-1" onclick="toggleBooking(1)">กดจอง</button>
         </div>
 
         <!-- ช่อง 2 -->
         <div class="slot-card" id="card-2">
             <div class="slot-title">ช่อง 2</div>
             <div class="status-text" id="status-2">ว่าง</div>
-            <button id="btn-2" onclick="toggleBooking(2)">กดจอง</button>
+            <button class="btn-slot" id="btn-2" onclick="toggleBooking(2)">กดจอง</button>
         </div>
 
         <!-- ช่อง 3 -->
         <div class="slot-card" id="card-3">
             <div class="slot-title">ช่อง 3</div>
             <div class="status-text" id="status-3">ว่าง</div>
-            <button id="btn-3" onclick="toggleBooking(3)">กดจอง</button>
+            <button class="btn-slot" id="btn-3" onclick="toggleBooking(3)">กดจอง</button>
         </div>
     </div>
 
     <script>
-        const ESP32_IP = "10.0.151.131";
+        // IP เริ่มต้น
+        let currentIP = "10.0.151.131";
+
         const reservedState = { 1: false, 2: false, 3: false };
         const occupiedState = { 1: false, 2: false, 3: false };
 
         function getIP() {
-            return `http://${ESP32_IP}`;
+            return `http://${currentIP}`;
+        }
+
+        // ฟังก์ชันเมื่อกดปุ่ม "เปลี่ยน IP"
+        function changeIP() {
+            const newIP = prompt("กรุณากรอก IP Address ใหม่ของ ESP32:", currentIP);
+            if (newIP !== null && newIP.trim() !== "") {
+                currentIP = newIP.trim();
+                document.getElementById('currentIPDisplay').innerText = currentIP;
+            }
         }
 
         function toggleBooking(slot) {
-            if (occupiedState[slot]) return; // ถ้ามีรถจอดอยู่ ห้ามกดจอง
+            if (occupiedState[slot]) return;
 
             reservedState[slot] = !reservedState[slot];
             const action = reservedState[slot] ? 'book' : 'cancel';
 
-            // ส่งคำสั่งไปยัง ESP32
             fetch(`${getIP()}/api/reserve?slot=${slot}&action=${action}`)
                 .then(res => res.text())
                 .then(() => updateUI(slot))
-                .catch(err => alert("ไม่สามารถติดต่อ ESP32 ได้ กรุณาเช็ค IP หรือ Wi-Fi"));
+                .catch(err => alert("ไม่สามารถติดต่อ ESP32 ได้ กรุณาเช็กการเชื่อมต่อ Wi-Fi หรือ IP"));
         }
 
         function updateUI(slot) {
@@ -89,7 +100,7 @@
             const statusText = document.getElementById(`status-${slot}`);
             const btn = document.getElementById(`btn-${slot}`);
 
-            card.className = 'slot-card'; // รีเซ็ต class
+            card.className = 'slot-card';
 
             if (occupiedState[slot]) {
                 card.classList.add('occupied');
@@ -108,7 +119,6 @@
             }
         }
 
-        // ดึงสถานะระยะทางจาก Ultrasonic บน ESP32 ทุกๆ 1 วินาที
         setInterval(() => {
             fetch(`${getIP()}/api/status`)
                 .then(res => res.json())
