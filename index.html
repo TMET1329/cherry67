@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจองที่จอดรถ 3 ช่อง (Smart Parking)</title>
+    <title>ระบบจองที่จอดรถ</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f0f2f5; padding: 20px; }
         h1 { color: #1c1e21; }
@@ -98,11 +98,11 @@
                 btn.disabled = true;
             } else if (reservedState[slot]) {
                 card.classList.add('reserved');
-                statusText.innerText = 'จองแล้ว (ไฟเหลือง)';
+                statusText.innerText = 'จองแล้ว';
                 btn.innerText = 'ยกเลิกการจอง';
                 btn.disabled = false;
             } else {
-                statusText.innerText = 'ว่าง (ไฟเขียว)';
+                statusText.innerText = 'ว่าง';
                 btn.innerText = 'กดจอง';
                 btn.disabled = false;
             }
