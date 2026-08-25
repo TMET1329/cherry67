@@ -35,9 +35,8 @@
 
     <h1>ที่จอดรถ</h1>
     
-    <div class="ip-config">
-        <label>IP ESP32: </label>
-        <input type="text" id="espIP" value="192.168.1.50" placeholder="ใส่ IP ของ ESP32">
+    <div class="ip-info">
+        สถานะการเชื่อมต่อ: IP ESP32 (10.0.151.131)
     </div>
 
     <div class="parking-container">
@@ -64,6 +63,7 @@
     </div>
 
     <script>
+        const ESP32_IP = "10.0.151.131";
         const reservedState = { 1: false, 2: false, 3: false };
         const occupiedState = { 1: false, 2: false, 3: false };
 
